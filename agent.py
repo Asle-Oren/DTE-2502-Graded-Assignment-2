@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def huber_loss(y_true, y_pred, delta=1):
-    """Keras implementation for huber loss
+    """Torch implementation for huber loss
     loss = {
         0.5 * (y_true - y_pred)**2 if abs(y_true - y_pred) < delta
         delta * (abs(y_true - y_pred) - 0.5 * delta) otherwise
@@ -65,10 +65,9 @@ def mean_huber_loss(y_true, y_pred, delta=1):
 
 class Agent():
     """Base class for all agents
-    This class extends to the following classes
+    This class extends to the class
     DeepQLearningAgent
-    HamiltonianCycleAgent
-    BreadthFirstSearchAgent
+
 
     Attributes
     ----------
@@ -265,6 +264,7 @@ class Agent():
 
 class DQNModel(nn.Module):
     """Was supposed to dynamically build model based on config but never got it working"""
+
     def __init__(self, board_size, n_frames, n_actions, version):
         super(DQNModel, self).__init__()
 
@@ -405,17 +405,16 @@ class DeepQLearningAgent(Agent):
         self.reset_models()
 
     def reset_models(self):
-        self._model = self._agent_model(
+        # self._model = self._agent_model(self._board_size, self._n_frames, self._n_actions, self._version).to(device)
+        self._model = DQNModel(
             self._board_size, self._n_frames, self._n_actions, self._version).to(device)
-        # print(f'{self._model=}')
-        # test = self._model.parameters()
-        # for hjk in test:
-        #    print(f'{hjk.shape=}')
+
         self._actor_optimizer = optim.RMSprop(
             self._model.parameters(), lr=0.0005)
 
         if self._use_target_net:
-            self._target_net = self._agent_model(
+            # self._target_net = self._agent_model(self._board_size, self._n_frames, self._n_actions, self._version).to(device)
+            self._target_net = DQNModel(
                 self._board_size, self._n_frames, self._n_actions, self._version).to(device)
             self.update_target_net()
 
@@ -459,7 +458,6 @@ class DeepQLearningAgent(Agent):
         # the default model to use
         if model is None:
             model = self._model
-        model.eval()
         with torch.inference_mode():
             model_outputs = model(board_tensor).cpu().numpy()
         return model_outputs
@@ -479,7 +477,7 @@ class DeepQLearningAgent(Agent):
         """
         # return board.copy()
         # return((board/128.0 - 1).copy())
-        return board.astype(np.float32) / 4.0
+        return board.astype(np.float32)/4.0
 
     def move(self, board, legal_moves, value=None):
         """Get the action with maximum Q value
@@ -500,6 +498,7 @@ class DeepQLearningAgent(Agent):
         model_outputs = self._get_model_outputs(board, self._model)
         return np.argmax(np.where(legal_moves == 1, model_outputs, -np.inf), axis=1)
 
+    # Static model used for sanity check
     def _agent_model(self, board_size, n_frames, n_actions, version):
         """Returns the model which evaluates Q values for a given state input
 
@@ -538,6 +537,7 @@ class DeepQLearningAgent(Agent):
 
         return DQNModel(board_size, n_frames, n_actions, version)
 
+    # Not used in this assignment but left in for completeness
     def set_weights_trainable(self):
         """Set selected layers to non trainable and compile the model"""
         for layer in self._model.layers:
@@ -548,6 +548,7 @@ class DeepQLearningAgent(Agent):
         self._model.compile(optimizer=self._model.optimizer,
                             loss=self._model.loss)
 
+    # Not used in this assignment but left in for completeness
     def get_action_proba(self, board, values=None):
         """Returns the action probability values using the DQN model
 
@@ -574,6 +575,7 @@ class DeepQLearningAgent(Agent):
             model_outputs.sum(axis=1).reshape((-1, 1))
         return model_outputs
 
+    # Changed extention from ".h5" to ".pt"
     def save_model(self, file_path='', iteration=None):
         """Save the current models to disk using pytorch's
         inbuilt save model function (saves in h5 format)
@@ -591,16 +593,17 @@ class DeepQLearningAgent(Agent):
             assert isinstance(iteration, int), "iteration should be an integer"
         else:
             iteration = 0
-        torch.save(self._model.state_dict(), 
+        torch.save(self._model.state_dict(),
                    f"{file_path}/model_{iteration:04d}.pt")
         if self._use_target_net:
-            torch.save(self._target_net.state_dict(), 
+            torch.save(self._target_net.state_dict(),
                        f"{file_path}/model_{iteration:04d}_target.pt")
 
+    # Changed extention from ".h5" to ".pt"
     def load_model(self, file_path='', iteration=None):
         """ load any existing models, if available """
         """Load models from disk using pytorch's
-        inbuilt load model function (model saved in h5 format)
+        inbuilt load model function (model saved in pt format)
         
         Parameters
         ----------
@@ -673,7 +676,7 @@ class DeepQLearningAgent(Agent):
         # Convert data to PyTorch tensors
         state = torch.FloatTensor(self._normalize_board(state)).to(device)
         actions = torch.FloatTensor(actions).to(device)
-        rewards = torch.FloatTensor(rewards).to(device).unsqueeze(1)
+        rewards = torch.FloatTensor(rewards).to(device)
         next_state = torch.FloatTensor(
             self._normalize_board(next_state)).to(device)
         done = torch.FloatTensor(done).to(device)
@@ -681,10 +684,10 @@ class DeepQLearningAgent(Agent):
 
         current_model = self._target_net if self._use_target_net else self._model
         next_model_outputs = current_model(next_state)
-        discounted_reward = rewards + (self._gamma *
-                                       torch.max(torch.where(
-                                           legal_moves == 1, next_model_outputs, torch.tensor(-np.inf)), dim=1)[0]
-                                       .reshape(-1, 1)) * (1-done)
+
+        max_q = torch.max(torch.where(legal_moves == 1, next_model_outputs,
+                          torch.tensor(-np.inf)), dim=1)[0].reshape(-1, 1)
+        discounted_reward = rewards + (self._gamma * max_q * (1-done))
 
         # Prepare target Q-values
         target = self._model(state)
@@ -708,6 +711,7 @@ class DeepQLearningAgent(Agent):
         if (self._use_target_net):
             self._target_net.load_state_dict(self._model.state_dict())
 
+    # I didn't end up using this function
     def compare_weights(self):
         """Simple utility function to heck if the model and target 
         network have the same weights or not
@@ -719,6 +723,7 @@ class DeepQLearningAgent(Agent):
                 print('Layer {:d} Weights {:d} Match : {:d}'.format(
                     i, j, int(c)))
 
+    # I didn't end up using this function
     def copy_weights_from_agent(self, agent_for_copy):
         """Update weights between competing agents which can be used
         in parallel training

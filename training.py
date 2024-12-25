@@ -57,7 +57,7 @@ if(agent_type in ['DeepQLearningAgent']):
     sample_actions = False
     n_games_training = 8*16
     decay = 0.97
-    if(supervised):
+    if(supervised): # Not used in this assignment but left in for completeness
         # lower the epsilon since some starting policy has already been trained
         epsilon = 0.01
         # load the existing model from a supervised method
@@ -65,8 +65,6 @@ if(agent_type in ['DeepQLearningAgent']):
         agent.load_model(file_path='models/{:s}'.format(version))
         # agent.set_weights_trainable()
 
-
-# decay = np.exp(np.log((epsilon_end/epsilon))/episodes)
 
 # use only for DeepQLearningAgent
 if(agent_type in ['DeepQLearningAgent']):
