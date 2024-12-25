@@ -94,3 +94,17 @@ axs.set_xlabel('Iteration')
 
 plt.legend()
 plt.show()
+
+
+fig, axs = plt.subplots(1, 1, figsize=(8, 8))
+axs.set_title('Loss vs iteration')
+
+axs.plot(df_base['iteration'][:100], df_base['loss'][:100], 
+        label='Loss', color='skyblue')
+
+
+axs.set_ylabel('Loss')
+axs.set_xlabel('Iteration')
+
+plt.legend()
+plt.show()
