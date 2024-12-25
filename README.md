@@ -9,7 +9,7 @@ There is only pytorch code for the DeepQLearningAgent
 To run this code do the following:
 - Clone/download repo
 - Make an enviroment using conda or .venv ex: ```python -m venv .venv```
-- Activate enviroment. ex: ```.venv\Scripts\activate``` or source ```.venv/bin/activate```
+- Activate enviroment. ex: ```.venv\Scripts\activate``` or ```source .venv/bin/activate```
 - Install requirements. If using venv: ```pip install -r venvrequirements.txt```
 - Run training or skip to use existing model: ```python training.py```
 - Render videos of the model playing: ```python game_visualization.py```
